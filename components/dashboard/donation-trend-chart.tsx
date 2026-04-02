@@ -55,13 +55,13 @@ const DonationTrendChart = ({ data }: any) => {
             <Bar
               dataKey="donations"
               barSize={40}
-              fill="#82ca9d"
+              fill="hsl(var(--primary))"
               name="Total Donations"
             />
             <Line
               type="monotone"
               dataKey="trend"
-              stroke="#8884d8"
+              stroke="hsl(var(--chart-2))"
               strokeWidth={2}
               name="Trend Line"
             />

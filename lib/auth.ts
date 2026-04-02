@@ -80,23 +80,47 @@ export const roleAllowedPaths: Record<AdminRole, (pathname: string) => boolean> 
   },
 };
 
+/** Backend API base (must be the Express server, not this Next.js app URL). */
+function apiBaseUrl(): string {
+  return (process.env.NEXT_PUBLIC_API_URL ?? "").trim().replace(/\/$/, "");
+}
+
+/** Headers for server-side calls to the API. Ngrok free tier often returns an HTML interstitial unless these are set. */
+function authApiHeaders(): HeadersInit {
+  const h: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+  const base = apiBaseUrl();
+  if (/ngrok/i.test(base)) {
+    h["ngrok-skip-browser-warning"] = "69420";
+    h["User-Agent"] =
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+  }
+  return h;
+}
+
 // Function to refresh the access token
 async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh-tokens`,
+      `${apiBaseUrl()}/auth/refresh-tokens`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: authApiHeaders(),
         body: JSON.stringify({
           refreshToken: token.tokens.refresh.token,
         }),
       }
     );
 
-    const refreshedTokens = await response.json();
+    const raw = await response.text();
+    let refreshedTokens: { tokens?: AuthTokens } & Partial<AuthTokens> = {};
+    try {
+      refreshedTokens = raw ? JSON.parse(raw) : {};
+    } catch {
+      refreshedTokens = {};
+    }
 
     if (!response.ok) {
       return {
@@ -105,9 +129,10 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
       };
     }
 
+    const nextTokens = refreshedTokens.tokens ?? (refreshedTokens as unknown as AuthTokens);
     return {
       ...token,
-      tokens: refreshedTokens.tokens,
+      tokens: nextTokens,
       error: undefined,
     };
   } catch (error) {
@@ -132,25 +157,54 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          const response = await fetch(
-             `${process.env.NEXT_PUBLIC_API_URL}/auth/login`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                email: credentials.email,
-                password: credentials.password,
-              }),
-            }
-          );
-
-          if (!response.ok) {
+          const base = apiBaseUrl();
+          if (!base) {
+            console.error(
+              "[next-auth] NEXT_PUBLIC_API_URL is missing. Set it to your backend base URL (e.g. http://localhost:5006/v1)."
+            );
             return null;
           }
 
-          const data = await response.json();
+          const loginUrl = `${base}/auth/login`;
+          const response = await fetch(loginUrl, {
+            method: "POST",
+            headers: authApiHeaders(),
+            body: JSON.stringify({
+              email: credentials.email.trim().toLowerCase(),
+              password: credentials.password,
+            }),
+          });
+
+          const raw = await response.text();
+          const ct = response.headers.get("content-type") ?? "";
+          const looksLikeJson =
+            ct.includes("application/json") || raw.trimStart().startsWith("{");
+
+          if (!response.ok) {
+            if (process.env.NODE_ENV === "development") {
+              console.error(
+                "[next-auth] Login API error:",
+                response.status,
+                raw.slice(0, 400)
+              );
+            }
+            return null;
+          }
+
+          if (!looksLikeJson) {
+            console.error(
+              "[next-auth] Login got HTML instead of JSON (your DB/users are unrelated to this).\n" +
+                `  Request URL: ${loginUrl}\n` +
+                "  Common fixes:\n" +
+                "  • Point ngrok at your Express API port (e.g. ngrok http 5006), NOT the Next.js dev port (3000).\n" +
+                "  • Or use NEXT_PUBLIC_API_URL=http://localhost:<API_PORT>/v1 when admin and API run on the same machine.\n" +
+                "  • Ngrok free tier: HTML interstitial — headers to skip it are sent; if it persists, open the URL in a browser once or upgrade ngrok.\n" +
+                `  Body start: ${raw.slice(0, 120).replace(/\s+/g, " ")}`
+            );
+            return null;
+          }
+
+          const data = JSON.parse(raw);
 
           return {
             user: data.user,
@@ -158,6 +212,9 @@ export const authOptions: NextAuthOptions = {
             settings: data.settings, // Include settings in user object
           };
         } catch (error) {
+          if (process.env.NODE_ENV === "development") {
+            console.error("[next-auth] Login request failed:", error);
+          }
           return null;
         }
       },

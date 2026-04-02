@@ -385,7 +385,7 @@
 import type { AuthTokens } from "@/lib/auth";
 import { getSession } from "next-auth/react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").trim().replace(/\/$/, "");
 
 async function fetchPublic(endpoint: string, options: RequestInit = {}) {
   const headers = new Headers(options.headers);

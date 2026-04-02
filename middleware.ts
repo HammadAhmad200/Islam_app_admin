@@ -3,34 +3,42 @@ import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { normalizeRole, roleAllowedPaths, type AdminRole } from "@/lib/auth";
 
+/** Post-login redirect: same-origin path only; never API-style paths mistaken for Next routes. */
+function sanitizeCallbackParam(raw: string | null, request: NextRequest): string {
+  if (!raw || raw.trim() === "") return "/dashboard";
+  try {
+    if (raw.startsWith("/")) {
+      if (raw.startsWith("/v1/") || raw.startsWith("/api")) return "/dashboard";
+      return raw;
+    }
+    const u = new URL(raw);
+    if (u.origin !== request.nextUrl.origin) return "/dashboard";
+    const path = u.pathname + u.search;
+    if (path.startsWith("/v1/") || path.startsWith("/api")) return "/dashboard";
+    return path || "/dashboard";
+  } catch {
+    return "/dashboard";
+  }
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
-  // Check if the path is the login page
   const isLoginPage = pathname === "/login";
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard"; // Ensure correct redirect
+  const callbackUrl = sanitizeCallbackParam(searchParams.get("callbackUrl"), request);
 
-  // Get the session token
   const token = await getToken({ req: request });
-  console.log("token", token);
-  console.log("isLoginPage", isLoginPage);
-  console.log("callbackUrl", callbackUrl);
-  // console.log("pathname", pathname);
-  // console.log("searchParams", searchParams);
-  // console.log("request.url", request.url);
-  // console.log("request", request);
-  // console.log("request.nextUrl", request.nextUrl);
-  console.log("request.nextUrl.pathname", request.nextUrl.pathname);
-  // If there's no token and the path is not the login page, redirect to login
+
   if (!token && !isLoginPage) {
     const url = new URL("/login", request.url);
-    url.searchParams.set("callbackUrl", encodeURI(request.url));
+    const afterLogin = request.nextUrl.pathname + request.nextUrl.search;
+    const safeReturn = sanitizeCallbackParam(afterLogin, request);
+    url.searchParams.set("callbackUrl", safeReturn);
     return NextResponse.redirect(url);
   }
 
-  // If there's a token and the path is the login page, redirect to dashboard
   if (token && isLoginPage) {
-    return NextResponse.redirect(new URL(callbackUrl, request.url)); // Redirect correctly
+    return NextResponse.redirect(new URL(callbackUrl, request.url));
   }
 
   // Role-based access control

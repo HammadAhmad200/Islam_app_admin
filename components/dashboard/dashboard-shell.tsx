@@ -29,13 +29,15 @@ export function DashboardShell({ children }: DashboardShellProps) {
   return (
     <div className="flex min-h-screen">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-64 flex-col border-r bg-background">
-        <div className="flex h-14 items-center border-b px-4">
-          <span className="font-semibold">Islamic App</span>
+      <aside className="hidden md:flex w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
+        <div className="flex h-14 items-center border-b border-sidebar-border px-4">
+          <span className="font-semibold tracking-tight text-white">Islamic App</span>
         </div>
         <nav className="flex-1 overflow-auto py-4">
           <div className="px-3 py-2">
-            <h2 className="mb-2 px-4 text-xs font-semibold tracking-tight text-muted-foreground">Main</h2>
+            <h2 className="mb-2 px-4 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/55">
+              Main
+            </h2>
             <div className="space-y-1">
               {showGeneral && (
                 <NavItem href="/dashboard" icon={<Home className="mr-2 h-4 w-4" />} isActive={pathname === "/dashboard"}>
@@ -90,7 +92,9 @@ export function DashboardShell({ children }: DashboardShellProps) {
             </div>
           </div>
           <div className="px-3 py-2">
-            <h2 className="mb-2 px-4 text-xs font-semibold tracking-tight text-muted-foreground">Management</h2>
+            <h2 className="mb-2 px-4 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/55">
+              Management
+            </h2>
             <div className="space-y-1">
               {showUsers && (
                 <NavItem href="/users" icon={<Users className="mr-2 h-4 w-4" />} isActive={pathname.startsWith("/users")}>
@@ -118,8 +122,12 @@ export function DashboardShell({ children }: DashboardShellProps) {
             </div>
           </div>
         </nav>
-        <div className="border-t p-3">
-          <Button variant="ghost" className="w-full justify-start" onClick={() => signOut({ callbackUrl: "/login" })}>
+        <div className="border-t border-sidebar-border p-3">
+          <Button
+            variant="ghost"
+            className="w-full justify-start text-sidebar-foreground hover:bg-white/10 hover:text-white"
+            onClick={() => signOut({ callbackUrl: "/login" })}
+          >
             <LogOut className="mr-2 h-4 w-4" />
             Logout
           </Button>
@@ -127,7 +135,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
       </aside>
 
       {/* Main Content */}
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col bg-gradient-to-b from-background via-background to-muted/50">
         <MainNav />
         <main className="flex-1 overflow-auto p-4 md:p-6">
           <div className="mx-auto max-w-7xl space-y-4">{children}</div>
@@ -150,8 +158,10 @@ function NavItem({ href, icon, children, className, isActive }: NavItemProps) {
     <Link
       href={href}
       className={cn(
-        "flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-        isActive && "bg-accent text-accent-foreground",
+        "flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+        isActive
+          ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
+          : "text-sidebar-foreground/85 hover:bg-white/10 hover:text-white",
         className,
       )}
     >

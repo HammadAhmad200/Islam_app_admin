@@ -1,7 +1,8 @@
 import type React from "react";
+import type { Metadata } from "next";
+
 import "@/app/globals.css";
 import { Providers } from "@/app/providers";
-import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Islamic App Admin Panel",
@@ -16,11 +17,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
+      <body className="font-sans antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>
   );
 }
-
-import "./globals.css";

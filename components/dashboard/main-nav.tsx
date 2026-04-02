@@ -29,11 +29,12 @@ import {
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { isSuperAdmin, isSimpleAdmin, isImamAdmin } from "@/lib/auth";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { NotificationsDropdown } from "../notifications-dropdown";
 
 export function MainNav() {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
   const { data: session } = useSession();
   const router = useRouter();
   const role = session?.user?.role;
@@ -50,7 +51,7 @@ export function MainNav() {
   console.log("showNotifications",showNotifications)
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background px-3 md:px-6">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border/80 bg-card/90 px-3 shadow-sm backdrop-blur-md md:px-6">
       {/* Mobile Menu Trigger */}
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
@@ -59,13 +60,16 @@ export function MainNav() {
             <span className="sr-only">Toggle menu</span>
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-64 p-0">
-          <div className="flex h-14 items-center border-b px-4">
-            <span className="font-semibold">Admin Panel</span>
+        <SheetContent
+          side="left"
+          className="w-64 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground"
+        >
+          <div className="flex h-14 items-center border-b border-sidebar-border px-4">
+            <span className="font-semibold tracking-tight text-white">Islamic App</span>
           </div>
           <nav className="flex-1 overflow-auto py-4">
             <div className="px-3 py-2">
-              <h2 className="mb-2 px-4 text-xs font-semibold tracking-tight text-muted-foreground">
+              <h2 className="mb-2 px-4 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/55">
                 Main
               </h2>
               <div className="space-y-1">
@@ -73,15 +77,17 @@ export function MainNav() {
                   <MobileNavItem
                     href="/dashboard"
                     icon={<Home className="mr-2 h-4 w-4" />}
+                    isActive={pathname === "/dashboard"}
                     onClick={() => setOpen(false)}
                   >
                     Dashboard
                   </MobileNavItem>
                 )}
-                {showGeneral && (
+                {showBlogs && (
                   <MobileNavItem
                     href="/blogs"
                     icon={<BookOpen className="mr-2 h-4 w-4" />}
+                    isActive={pathname.startsWith("/blogs")}
                     onClick={() => setOpen(false)}
                   >
                     Blogs
@@ -91,15 +97,17 @@ export function MainNav() {
                   <MobileNavItem
                     href="/donations"
                     icon={<DollarSign className="mr-2 h-4 w-4" />}
+                    isActive={pathname.startsWith("/donations")}
                     onClick={() => setOpen(false)}
                   >
                     Donations
                   </MobileNavItem>
                 )}
-                {showGeneral && (
+                {showMasjids && (
                   <MobileNavItem
                     href="/masjids"
                     icon={<ChurchIcon className="mr-2 h-4 w-4" />}
+                    isActive={pathname.startsWith("/masjids")}
                     onClick={() => setOpen(false)}
                   >
                     Masjids
@@ -109,6 +117,7 @@ export function MainNav() {
                   <MobileNavItem
                     href="/notifications"
                     icon={<Bell className="mr-2 h-4 w-4" />}
+                    isActive={pathname.startsWith("/notifications")}
                     onClick={() => setOpen(false)}
                   >
                     Notifications
@@ -118,6 +127,7 @@ export function MainNav() {
                   <MobileNavItem
                     href="/imam-queries"
                     icon={<Bell className="mr-2 h-4 w-4" />}
+                    isActive={pathname.startsWith("/imam-queries")}
                     onClick={() => setOpen(false)}
                   >
                     Imam Queries
@@ -126,7 +136,7 @@ export function MainNav() {
               </div>
             </div>
             <div className="px-3 py-2">
-              <h2 className="mb-2 px-4 text-xs font-semibold tracking-tight text-muted-foreground">
+              <h2 className="mb-2 px-4 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/55">
                 Management
               </h2>
               <div className="space-y-1">
@@ -134,6 +144,7 @@ export function MainNav() {
                   <MobileNavItem
                     href="/users"
                     icon={<Users className="mr-2 h-4 w-4" />}
+                    isActive={pathname.startsWith("/users")}
                     onClick={() => setOpen(false)}
                   >
                     Users
@@ -143,6 +154,7 @@ export function MainNav() {
                   <MobileNavItem
                     href="/subscriptions"
                     icon={<CreditCard className="mr-2 h-4 w-4" />}
+                    isActive={pathname.startsWith("/subscriptions")}
                     onClick={() => setOpen(false)}
                   >
                     Subscriptions
@@ -152,6 +164,7 @@ export function MainNav() {
                   <MobileNavItem
                     href="/settings"
                     icon={<Settings className="mr-2 h-4 w-4" />}
+                    isActive={pathname.startsWith("/settings")}
                     onClick={() => setOpen(false)}
                   >
                     Settings
@@ -160,10 +173,10 @@ export function MainNav() {
               </div>
             </div>
           </nav>
-          <div className="border-t p-3">
+          <div className="border-t border-sidebar-border p-3">
             <Button
               variant="ghost"
-              className="w-full justify-start"
+              className="w-full justify-start text-sidebar-foreground hover:bg-white/10 hover:text-white"
               onClick={() => signOut({ callbackUrl: "/login" })}
             >
               <LogOut className="mr-2 h-4 w-4" />
@@ -226,6 +239,7 @@ interface MobileNavItemProps {
   icon: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  isActive?: boolean;
   onClick?: () => void;
 }
 
@@ -234,13 +248,17 @@ function MobileNavItem({
   icon,
   children,
   className,
+  isActive,
   onClick,
 }: MobileNavItemProps) {
   return (
     <Link
       href={href}
       className={cn(
-        "flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
+        "flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+        isActive
+          ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
+          : "text-sidebar-foreground/85 hover:bg-white/10 hover:text-white",
         className
       )}
       onClick={onClick}
