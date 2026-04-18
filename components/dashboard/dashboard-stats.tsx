@@ -3,7 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/lib/api";
 import { Analytics } from "@/lib/api-types";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, DollarSign, ChurchIcon as Mosque } from "lucide-react";
+import {
+  BookOpen,
+  DollarSign,
+  ChurchIcon as Mosque,
+  Users,
+} from "lucide-react";
 import { useEffect } from "react";
 
 export function DashboardStats({ setData }: any) {
@@ -22,8 +27,8 @@ export function DashboardStats({ setData }: any) {
     setData(analytics?.donationTrends);
   }, [analytics]);
   return (
-    <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-3">
-      <Card className="min-w-0">
+    <>
+      <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Blogs</CardTitle>
           <BookOpen className="h-4 w-4 text-muted-foreground" />
@@ -35,7 +40,7 @@ export function DashboardStats({ setData }: any) {
           </p> */}
         </CardContent>
       </Card>
-      <Card className="min-w-0">
+      <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Donations</CardTitle>
           <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -52,7 +57,7 @@ export function DashboardStats({ setData }: any) {
           </p> */}
         </CardContent>
       </Card>
-      <Card className="min-w-0">
+      <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Masjids</CardTitle>
           <Mosque className="h-4 w-4 text-muted-foreground" />
@@ -64,6 +69,7 @@ export function DashboardStats({ setData }: any) {
           </p> */}
         </CardContent>
       </Card>
-    </div>
+    
+    </>
   );
 }
