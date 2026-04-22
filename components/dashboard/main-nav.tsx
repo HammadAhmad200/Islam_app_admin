@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell, Menu, Search } from "lucide-react";
+import { Bell, Mail, Menu, Search } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
 import Link from "next/link";
@@ -47,7 +47,7 @@ export function MainNav() {
   const showGeneral = !isImamAdmin(role); // imam has no access to general admin features
   console.log("showGeneral",showGeneral)
   const showNotifications = isSuperAdmin(role) || isSimpleAdmin(role) || isImamAdmin(role);
-  const showImamQueries = isImamAdmin(role);
+  const showImamQueries = isSuperAdmin(role);
   console.log("showNotifications",showNotifications)
 
   return (
@@ -126,11 +126,11 @@ export function MainNav() {
                 {showImamQueries && (
                   <MobileNavItem
                     href="/imam-queries"
-                    icon={<Bell className="mr-2 h-4 w-4" />}
+                    icon={<Mail className="mr-2 h-4 w-4" />}
                     isActive={pathname.startsWith("/imam-queries")}
                     onClick={() => setOpen(false)}
                   >
-                    Imam Queries
+                    Imam Emails
                   </MobileNavItem>
                 )}
               </div>

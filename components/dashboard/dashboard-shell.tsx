@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { MainNav } from "@/components/dashboard/main-nav"
-import { Bell, BookOpen, ChurchIcon, CreditCard, DollarSign, Home, LogOut, Settings, Users } from "lucide-react"
+import { Bell, BookOpen, ChurchIcon, CreditCard, DollarSign, Home, LogOut, Mail, Settings, Users } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -22,7 +22,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
   const showUsers = isSuperAdmin(role)
   const showGeneral = !isImamAdmin(role)
   const showNotifications = isSuperAdmin(role) || isSimpleAdmin(role) || isImamAdmin(role)
-  const showImamQueries = isImamAdmin(role)
+  const showImamQueries = isSuperAdmin(role)
   console.log("showImamQueries",showImamQueries)
   const showMasjids = isSuperAdmin(role) || isSimpleAdmin(role);
   const showBlogs = isSuperAdmin(role) || isSimpleAdmin(role);
@@ -83,10 +83,10 @@ export function DashboardShell({ children }: DashboardShellProps) {
               {showImamQueries && (
                 <NavItem
                   href="/imam-queries"
-                  icon={<Bell className="mr-2 h-4 w-4" />}
+                  icon={<Mail className="mr-2 h-4 w-4" />}
                   isActive={pathname.startsWith("/imam-queries")}
                 >
-                  Imam Queries
+                  Imam Emails
                 </NavItem>
               )}
             </div>

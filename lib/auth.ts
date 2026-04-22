@@ -72,10 +72,9 @@ export const roleAllowedPaths: Record<AdminRole, (pathname: string) => boolean> 
     return true;
   },
   imamAdmin: (pathname: string) => {
-    // Imam can view notifications and imam queries
+    // Imam can view notifications only
     if (pathname === "/" || pathname === "") return false;
     if (pathname.startsWith("/notifications")) return true;
-    if (pathname.startsWith("/imam-queries")) return true;
     return false;
   },
 };

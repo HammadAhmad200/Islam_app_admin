@@ -565,7 +565,27 @@ export const api = {
     fetchWithAuth(`/masjid/timings/${id}`, { method: "DELETE" }),
 
   // Users
-  getUsers: async () => fetchWithAuth("/users"),
+  getUsers: async (params?: {
+    status?: "active" | "inactive" | "suspended";
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+  }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.status) searchParams.set("status", params.status);
+    if (params?.page) searchParams.set("page", String(params.page));
+    if (params?.limit) searchParams.set("limit", String(params.limit));
+    if (params?.sortBy) searchParams.set("sortBy", params.sortBy);
+    const qs = searchParams.toString();
+    return fetchWithAuth(`/users${qs ? `?${qs}` : ""}`);
+  },
+  getBlockedUsers: async (params?: { page?: number; limit?: number }) =>
+    api.getUsers({
+      status: "suspended",
+      page: params?.page,
+      limit: params?.limit,
+      sortBy: "createdAt:desc",
+    }),
   getUserById: async (id: string) => fetchWithAuth(`/users/${id}`),
   updateUser: async (id: string, data: any) => {
     return fetchWithAuth(`/users/${id}`, {
@@ -573,6 +593,13 @@ export const api = {
       body: JSON.stringify(data),
     });
   },
+  unblockUser: async (id: string) =>
+    fetchWithAuth(`/users/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: "active" }),
+    }),
+  deleteUser: async (id: string) =>
+    fetchWithAuth(`/users/${id}`, { method: "DELETE" }),
 
   //subscription packages
   getSubscriptionPackages: async () => fetchWithAuth("/plans"),
@@ -619,6 +646,12 @@ export const api = {
 
   // Imam - Contacts
   getContacts: async () => fetchWithAuth("/contact", { method: "GET" }),
+  getContactById: async (id: string) => fetchWithAuth(`/contact/${id}`, { method: "GET" }),
+  updateContactStatus: async (id: string, status: "new" | "read" | "replied") =>
+    fetchWithAuth(`/contact/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }),
 
   // Generic function
   fetchWithAuth: (endpoint: any, options?: RequestInit) =>

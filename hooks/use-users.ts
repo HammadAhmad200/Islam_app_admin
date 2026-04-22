@@ -28,6 +28,23 @@ export function useUser() {
     },
   });
 
+  const deleteUserMutation = useMutation({
+    mutationFn: (id: string) => api.deleteUser(id),
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "User deleted successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete user",
+        variant: "destructive",
+      });
+    },
+  });
+
   //   const toggleEmergencyDonation = useMutation({
   //     mutationFn: api.toggleEmergencyDonation,
   //     onSuccess: async () => {
@@ -59,5 +76,7 @@ export function useUser() {
   return {
     updateUser: updateUserMutation.mutateAsync,
     isUpdating: updateUserMutation.isPending,
+    deleteUser: deleteUserMutation.mutateAsync,
+    isDeleting: deleteUserMutation.isPending,
   };
 }
