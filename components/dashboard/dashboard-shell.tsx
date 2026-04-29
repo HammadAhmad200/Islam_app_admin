@@ -22,8 +22,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
   const showUsers = isSuperAdmin(role)
   const showGeneral = !isImamAdmin(role)
   const showNotifications = isSuperAdmin(role) || isSimpleAdmin(role) || isImamAdmin(role)
-  const showImamQueries = isSuperAdmin(role)
-  console.log("showImamQueries",showImamQueries)
+  const showContactUs = isSuperAdmin(role)
   const showMasjids = isSuperAdmin(role) || isSimpleAdmin(role);
   const showBlogs = isSuperAdmin(role) || isSimpleAdmin(role);
   return (
@@ -80,13 +79,13 @@ export function DashboardShell({ children }: DashboardShellProps) {
                   Notifications
                 </NavItem>
               )}
-              {showImamQueries && (
+              {showContactUs && (
                 <NavItem
-                  href="/imam-queries"
+                  href="/contact-us"
                   icon={<Mail className="mr-2 h-4 w-4" />}
-                  isActive={pathname.startsWith("/imam-queries")}
+                  isActive={pathname.startsWith("/contact-us")}
                 >
-                  Imam Emails
+                  Contact Us
                 </NavItem>
               )}
             </div>

@@ -66,15 +66,19 @@ export function isImamAdmin(role?: string) {
 export const roleAllowedPaths: Record<AdminRole, (pathname: string) => boolean> = {
   superAdmin: () => true,
   simpleAdmin: (pathname: string) => {
-    // Simple Admin cannot access users management or donations
+    // Simple Admin cannot access users management, donations, imam emails, or contact us
     if (pathname.startsWith("/users")) return false;
     if (pathname.startsWith("/donations")) return false;
+    if (pathname.startsWith("/imam-queries")) return false;
+    if (pathname.startsWith("/contact-us")) return false;
     return true;
   },
   imamAdmin: (pathname: string) => {
     // Imam can view notifications only
     if (pathname === "/" || pathname === "") return false;
     if (pathname.startsWith("/notifications")) return true;
+    if (pathname.startsWith("/imam-queries")) return false;
+    if (pathname.startsWith("/contact-us")) return false;
     return false;
   },
 };

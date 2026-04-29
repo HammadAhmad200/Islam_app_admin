@@ -47,7 +47,7 @@ export function MainNav() {
   const showGeneral = !isImamAdmin(role); // imam has no access to general admin features
   console.log("showGeneral",showGeneral)
   const showNotifications = isSuperAdmin(role) || isSimpleAdmin(role) || isImamAdmin(role);
-  const showImamQueries = isSuperAdmin(role);
+  const showContactUs = isSuperAdmin(role);
   console.log("showNotifications",showNotifications)
 
   return (
@@ -123,14 +123,14 @@ export function MainNav() {
                     Notifications
                   </MobileNavItem>
                 )}
-                {showImamQueries && (
+                {showContactUs && (
                   <MobileNavItem
-                    href="/imam-queries"
+                    href="/contact-us"
                     icon={<Mail className="mr-2 h-4 w-4" />}
-                    isActive={pathname.startsWith("/imam-queries")}
+                    isActive={pathname.startsWith("/contact-us")}
                     onClick={() => setOpen(false)}
                   >
-                    Imam Emails
+                    Contact Us
                   </MobileNavItem>
                 )}
               </div>

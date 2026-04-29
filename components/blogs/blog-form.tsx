@@ -149,9 +149,9 @@ export function BlogForm({ id }: BlogFormProps) {
 
     const payload = {
       caption: values.caption,
-      image: urls.image,
-      video: urls.video,
-      audio: urls.audio,
+      image: urls.image ?? blog?.image ?? null,
+      video: urls.video ?? blog?.video ?? null,
+      audio: urls.audio ?? blog?.audio ?? null,
       externalLink: values.externalLink,
       status: values.status,
     };

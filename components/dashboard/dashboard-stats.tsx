@@ -69,6 +69,15 @@ export function DashboardStats({ setData }: any) {
           </p> */}
         </CardContent>
       </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+          <Users className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{analytics?.activeUsers || 0}</div>
+        </CardContent>
+      </Card>
     
     </>
   );
