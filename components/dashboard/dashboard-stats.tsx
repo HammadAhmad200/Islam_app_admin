@@ -2,7 +2,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/lib/api";
 import { Analytics } from "@/lib/api-types";
+import { isSuperAdmin } from "@/lib/auth";
 import { useQuery } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
 import {
   BookOpen,
   DollarSign,
@@ -12,6 +14,8 @@ import {
 import { useEffect } from "react";
 
 export function DashboardStats({ setData }: any) {
+  const { data: session } = useSession();
+  const showActiveUsers = isSuperAdmin(session?.user?.role);
   const {
     data: analytics,
     isLoading,
@@ -69,16 +73,18 @@ export function DashboardStats({ setData }: any) {
           </p> */}
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-          <Users className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{analytics?.activeUsers || 0}</div>
-        </CardContent>
-      </Card>
-    
+      {showActiveUsers ? (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{analytics?.activeUsers || 0}</div>
+          </CardContent>
+        </Card>
+      ) : null}
+
     </>
   );
 }
