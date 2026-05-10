@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Eye } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 
@@ -45,12 +46,49 @@ interface ContactItem {
   message?: string;
   status?: ContactStatus;
   createdAt?: string;
+  voiceNote?: UploadedAsset | null;
+  attachments?: UploadedAsset[];
+}
+
+interface UploadedAsset {
+  url: string;
+  fileName?: string | null;
+  mimeType?: string | null;
+  size?: number | null;
 }
 
 function formatCreatedAt(value?: string) {
   if (!value) return "-";
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? "-" : d.toLocaleString();
+}
+
+function AssetLinks({
+  items,
+  emptyLabel = "-",
+}: {
+  items?: UploadedAsset[] | null;
+  emptyLabel?: string;
+}) {
+  if (!items || items.length === 0) {
+    return <span>{emptyLabel}</span>;
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      {items.map((item, index) => (
+        <Link
+          key={`${item.url}-${index}`}
+          href={item.url}
+          target="_blank"
+          rel="noreferrer"
+          className="text-sm text-blue-600 underline underline-offset-2"
+        >
+          {item.fileName || `File ${index + 1}`}
+        </Link>
+      ))}
+    </div>
+  );
 }
 
 export default function ContactUsPage() {
@@ -244,6 +282,8 @@ export default function ContactUsPage() {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Source</TableHead>
+                <TableHead>Voice Note</TableHead>
+                <TableHead>Files</TableHead>
                 <TableHead>Message</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created At</TableHead>
@@ -253,18 +293,18 @@ export default function ContactUsPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8}>Loading...</TableCell>
+                  <TableCell colSpan={10}>Loading...</TableCell>
                 </TableRow>
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-red-600">
+                  <TableCell colSpan={10} className="text-red-600">
                     Failed to load messages.
                   </TableCell>
                 </TableRow>
               ) : pagedRows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-10 text-center align-middle">
-                    No messages found.
+                  <TableCell colSpan={10} className="py-10 text-center align-middle">
+                  No messages found.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -277,6 +317,21 @@ export default function ContactUsPage() {
                       <TableCell className="whitespace-nowrap">{fullName}</TableCell>
                       <TableCell className="whitespace-nowrap">{row.email || "-"}</TableCell>
                       <TableCell>{row.source || "-"}</TableCell>
+                      <TableCell>
+                        {row.voiceNote?.url ? (
+                          <Link
+                            href={row.voiceNote.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-sm text-blue-600 underline underline-offset-2"
+                          >
+                            {row.voiceNote.fileName || "Open"}
+                          </Link>
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                      <TableCell>{row.attachments?.length || 0}</TableCell>
                       <TableCell className="max-w-[320px] truncate" title={row.message || ""}>
                         {row.message || "-"}
                       </TableCell>
@@ -389,6 +444,16 @@ export default function ContactUsPage() {
                 <div className="font-medium">{(selectedDetail || selectedRow)?.source || "-"}</div>
               </div>
               <div>
+                <div className="text-sm text-muted-foreground">Voice Note</div>
+                <AssetLinks
+                  items={(selectedDetail || selectedRow)?.voiceNote?.url ? [(selectedDetail || selectedRow)!.voiceNote!] : []}
+                />
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">Attachments</div>
+                <AssetLinks items={(selectedDetail || selectedRow)?.attachments} />
+              </div>
+              <div>
                 <div className="text-sm text-muted-foreground">Status</div>
                 <Badge>{(selectedDetail || selectedRow)?.status || "new"}</Badge>
               </div>
@@ -454,4 +519,3 @@ export default function ContactUsPage() {
     </DashboardShell>
   );
 }
-

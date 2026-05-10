@@ -37,7 +37,7 @@ import {
 import type { User } from "@/lib/api-types";
 import { api } from "@/lib/api";
 import { MoreHorizontal, Search, ShieldAlert, ShieldCheck, Trash, UserCog } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
@@ -69,6 +69,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useSession } from "next-auth/react";
+import { isSuperAdmin } from "@/lib/auth";
 
 const userFormSchema = z.object({
   name: z.string().min(2, {
@@ -95,6 +97,7 @@ type ViewFilter = "all" | "blocked";
 type PendingAction = "unblock" | "block" | "delete";
 
 export default function UsersPage() {
+  const { data: session } = useSession();
   const [searchQuery, setSearchQuery] = useState("");
   const [viewFilter, setViewFilter] = useState<ViewFilter>("all");
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -105,6 +108,14 @@ export default function UsersPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [actionUser, setActionUser] = useState<User | null>(null);
+  const canManageBlockedUsers = isSuperAdmin(session?.user?.role);
+
+  useEffect(() => {
+    if (!canManageBlockedUsers && viewFilter === "blocked") {
+      setViewFilter("all");
+      setPage(1);
+    }
+  }, [canManageBlockedUsers, viewFilter]);
 
   const {
     data: users,
@@ -112,9 +123,9 @@ export default function UsersPage() {
     error,
     refetch,
   } = useQuery<UserListResponse>({
-    queryKey: ["users", viewFilter, page, limit],
+    queryKey: ["users", canManageBlockedUsers ? viewFilter : "all", page, limit],
     queryFn: () =>
-      viewFilter === "blocked"
+      canManageBlockedUsers && viewFilter === "blocked"
         ? api.getBlockedUsers({ page, limit })
         : api.getUsers({ page, limit, sortBy: "createdAt:desc" }),
   });
@@ -232,7 +243,9 @@ export default function UsersPage() {
           >
             <TabsList>
               <TabsTrigger value="all">All Users</TabsTrigger>
-              <TabsTrigger value="blocked">Blocked Users</TabsTrigger>
+              {canManageBlockedUsers && (
+                <TabsTrigger value="blocked">Blocked Users</TabsTrigger>
+              )}
             </TabsList>
           </Tabs>
         </div>
@@ -325,21 +338,22 @@ export default function UsersPage() {
                               <UserCog className="mr-2 h-4 w-4" />
                               Edit User
                             </DropdownMenuItem>
-                            {user.status === "suspended" ? (
-                              <DropdownMenuItem
-                                onClick={() => openConfirm("unblock", user)}
-                              >
-                                <ShieldCheck className="mr-2 h-4 w-4" />
-                                Unblock User
-                              </DropdownMenuItem>
-                            ) : (
-                              <DropdownMenuItem
-                                onClick={() => openConfirm("block", user)}
-                              >
-                                <ShieldAlert className="mr-2 h-4 w-4" />
-                                Block User
-                              </DropdownMenuItem>
-                            )}
+                            {canManageBlockedUsers &&
+                              (user.status === "suspended" ? (
+                                <DropdownMenuItem
+                                  onClick={() => openConfirm("unblock", user)}
+                                >
+                                  <ShieldCheck className="mr-2 h-4 w-4" />
+                                  Unblock User
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem
+                                  onClick={() => openConfirm("block", user)}
+                                >
+                                  <ShieldAlert className="mr-2 h-4 w-4" />
+                                  Block User
+                                </DropdownMenuItem>
+                              ))}
                             <DropdownMenuItem
                               className="text-destructive"
                               onClick={() => openConfirm("delete", user)}
