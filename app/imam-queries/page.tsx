@@ -37,7 +37,11 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { ContactReplyPanel } from "@/components/contact/contact-reply-panel";
-import { buildContactMailto, type ContactReply } from "@/lib/contact-inquiry";
+import {
+  buildContactMailto,
+  formatContactDisplayName,
+  type ContactReply,
+} from "@/lib/contact-inquiry";
 
 const IMAM_CONTACT_LIST_QUERY_KEY = ["imam-emails"] as const;
 
@@ -114,7 +118,7 @@ export default function ImamQueriesPage() {
 
   const filteredContacts = useMemo(() => {
     return sortedContacts.filter((c) => {
-      const fullName = `${c.firstName} ${c.lastName}`.trim().toLowerCase();
+      const fullName = formatContactDisplayName(c.firstName, c.lastName).toLowerCase();
       const matchesSearch =
         fullName.includes(search.toLowerCase()) ||
         c.email.toLowerCase().includes(search.toLowerCase());
@@ -307,7 +311,7 @@ export default function ImamQueriesPage() {
               </TableRow>
             ) : (
               pagedContacts.map((c) => {
-                const fullName = `${c.firstName} ${c.lastName}`.trim();
+                const fullName = formatContactDisplayName(c.firstName, c.lastName);
                 const mailtoHref = buildContactMailto({
                   ...c,
                   source: c.source || "imamEmail",
@@ -420,7 +424,10 @@ export default function ImamQueriesPage() {
             <div>
               <div className="text-sm text-muted-foreground">Name</div>
               <div className="font-medium">
-                {`${(selectedDetail || selectedRow)?.firstName || ""} ${(selectedDetail || selectedRow)?.lastName || ""}`.trim()}
+                {formatContactDisplayName(
+                  (selectedDetail || selectedRow)?.firstName,
+                  (selectedDetail || selectedRow)?.lastName
+                )}
               </div>
             </div>
             <div>

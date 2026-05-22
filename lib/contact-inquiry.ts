@@ -22,6 +22,20 @@ export interface ContactInquiryLike {
   replies?: ContactReply[];
 }
 
+/** Avoid showing "jack jack" when first and last are the same or last is a placeholder. */
+export function formatContactDisplayName(
+  firstName?: string | null,
+  lastName?: string | null
+): string {
+  const first = (firstName || "").trim();
+  const last = (lastName || "").trim();
+  if (!first && !last) return "-";
+  if (!last || last === "-") return first || "-";
+  if (!first) return last;
+  if (first.toLowerCase() === last.toLowerCase()) return first;
+  return `${first} ${last}`.trim();
+}
+
 export function buildContactMailto(contact: ContactInquiryLike): string {
   const email = (contact.email || "").trim();
   if (!email) return "";
@@ -32,8 +46,11 @@ export function buildContactMailto(contact: ContactInquiryLike): string {
       ? "Re: Your question to Imam"
       : "Re: Your support message";
 
-  const name = `${contact.firstName || ""} ${contact.lastName || ""}`.trim();
-  const greeting = name ? `Assalamu Alaikum ${name},\n\n` : "Assalamu Alaikum,\n\n";
+  const name = formatContactDisplayName(contact.firstName, contact.lastName);
+  const nameForGreeting = name === "-" ? "" : name;
+  const greeting = nameForGreeting
+    ? `Assalamu Alaikum ${nameForGreeting},\n\n`
+    : "Assalamu Alaikum,\n\n";
   const original = contact.message?.trim()
     ? `\n\n---\nOriginal message:\n${contact.message.trim()}`
     : "";

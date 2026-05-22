@@ -43,7 +43,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { ContactReplyPanel } from "@/components/contact/contact-reply-panel";
-import { buildContactMailto, type ContactReply } from "@/lib/contact-inquiry";
+import {
+  buildContactMailto,
+  formatContactDisplayName,
+  type ContactReply,
+} from "@/lib/contact-inquiry";
 
 const CONTACT_LIST_QUERY_KEY = ["contact-us-list"] as const;
 
@@ -183,7 +187,7 @@ export default function ContactUsPage() {
 
   const filteredRows = useMemo(() => {
     return sortedRows.filter((row) => {
-      const fullName = `${row.firstName || ""} ${row.lastName || ""}`.trim().toLowerCase();
+      const fullName = formatContactDisplayName(row.firstName, row.lastName).toLowerCase();
       const email = (row.email || "").toLowerCase();
       const title = (row.title || "").toLowerCase();
       const q = search.toLowerCase();
@@ -390,7 +394,7 @@ export default function ContactUsPage() {
                 </TableRow>
               ) : (
                 pagedRows.map((row) => {
-                  const fullName = `${row.firstName || ""} ${row.lastName || ""}`.trim() || "-";
+                  const fullName = formatContactDisplayName(row.firstName, row.lastName);
                   const status = row.status || "new";
                   const mailtoHref = buildContactMailto(row);
                   return (
@@ -530,7 +534,10 @@ export default function ContactUsPage() {
               <div>
                 <div className="text-sm text-muted-foreground">Name</div>
                 <div className="font-medium">
-                  {`${(selectedDetail || selectedRow)?.firstName || ""} ${(selectedDetail || selectedRow)?.lastName || ""}`.trim() || "-"}
+                  {formatContactDisplayName(
+                    (selectedDetail || selectedRow)?.firstName,
+                    (selectedDetail || selectedRow)?.lastName
+                  )}
                 </div>
               </div>
               <div>
