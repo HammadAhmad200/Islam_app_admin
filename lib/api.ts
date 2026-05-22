@@ -622,7 +622,11 @@ export const api = {
   saveNotification: (data: any) => {
     return fetchWithAuth("/pushNotifications", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        ...data,
+        // Persist only; delivery is a single POST /pushNotifications/:id/send (avoids double FCM).
+        sendNow: false,
+      }),
     });
   },
   updateNotification: (id: string, data: any) => {
@@ -632,12 +636,10 @@ export const api = {
     });
   },
 
-  sendNotification: (id: any) => {
-    console.log(id);
-    return fetchWithAuth(`/pushNotifications/${id}/send`, {
+  sendNotification: (id: string) =>
+    fetchWithAuth(`/pushNotifications/${id}/send`, {
       method: "POST",
-    });
-  },
+    }),
   deleteNotification: (id: any) => {
     return fetchWithAuth(`/pushNotifications/${id}`, {
       method: "DELETE",
