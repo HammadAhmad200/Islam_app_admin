@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { Eye } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Eye, Mail, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -31,7 +31,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { ContactReplyPanel } from "@/components/contact/contact-reply-panel";
+import { buildContactMailto, type ContactReply } from "@/lib/contact-inquiry";
+
+const CONTACT_LIST_QUERY_KEY = ["contact-us-list"] as const;
 
 type ContactStatus = "new" | "read" | "replied";
 
@@ -48,6 +62,7 @@ interface ContactItem {
   createdAt?: string;
   voiceNote?: UploadedAsset | null;
   attachments?: UploadedAsset[];
+  replies?: ContactReply[];
 }
 
 interface UploadedAsset {
@@ -55,6 +70,23 @@ interface UploadedAsset {
   fileName?: string | null;
   mimeType?: string | null;
   size?: number | null;
+}
+
+function removeContactFromListCache(old: unknown, deletedId: string) {
+  if (!old || typeof old !== "object") return old;
+  const idMatches = (item: ContactItem) =>
+    String(item.id || item._id) !== String(deletedId);
+  if (Array.isArray(old)) {
+    return old.filter(idMatches);
+  }
+  const data = old as { results?: ContactItem[]; contacts?: ContactItem[] };
+  if (Array.isArray(data.results)) {
+    return { ...data, results: data.results.filter(idMatches) };
+  }
+  if (Array.isArray(data.contacts)) {
+    return { ...data, contacts: data.contacts.filter(idMatches) };
+  }
+  return old;
 }
 
 function formatCreatedAt(value?: string) {
@@ -92,7 +124,10 @@ function AssetLinks({
 }
 
 export default function ContactUsPage() {
+  const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [sourceTab, setSourceTab] = useState<"appSupport" | "imamEmail">("appSupport");
   const [statusFilter, setStatusFilter] = useState<"all" | ContactStatus>("all");
   const [search, setSearch] = useState("");
@@ -108,7 +143,7 @@ export default function ContactUsPage() {
     error,
     refetch,
   } = useQuery<any>({
-    queryKey: ["contact-us-list"],
+    queryKey: [...CONTACT_LIST_QUERY_KEY],
     queryFn: api.getContacts,
   });
 
@@ -189,6 +224,34 @@ export default function ContactUsPage() {
     [selectedDetailRaw]
   );
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.deleteContact(id),
+    onSuccess: (_data, deletedId) => {
+      queryClient.setQueryData(CONTACT_LIST_QUERY_KEY, (old) =>
+        removeContactFromListCache(old, deletedId)
+      );
+      setSelectedId(null);
+      setDeleteConfirmOpen(false);
+      setPendingDeleteId(null);
+      toast({
+        title: "Deleted",
+        description: "Message removed.",
+      });
+    },
+    onError: (err: Error) => {
+      const notFound = err.message === "Not found";
+      toast({
+        title: notFound ? "Not found" : "Error",
+        description: notFound ? "Not found" : err.message || "Failed to delete message.",
+        variant: "destructive",
+      });
+      if (notFound) {
+        setDeleteConfirmOpen(false);
+        setPendingDeleteId(null);
+      }
+    },
+  });
+
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: ContactStatus }) =>
       api.updateContactStatus(id, status),
@@ -222,6 +285,24 @@ export default function ContactUsPage() {
       console.log("Updating contact status", { contactId, status, row });
     }
     updateStatusMutation.mutate({ id: contactId, status });
+  }
+
+  function requestDelete(contactId: string | undefined) {
+    if (!contactId) {
+      toast({
+        title: "Error",
+        description: "Invalid contact id",
+        variant: "destructive",
+      });
+      return;
+    }
+    setPendingDeleteId(contactId);
+    setDeleteConfirmOpen(true);
+  }
+
+  function confirmDelete() {
+    if (!pendingDeleteId) return;
+    deleteMutation.mutate(pendingDeleteId);
   }
 
   return (
@@ -311,6 +392,7 @@ export default function ContactUsPage() {
                 pagedRows.map((row) => {
                   const fullName = `${row.firstName || ""} ${row.lastName || ""}`.trim() || "-";
                   const status = row.status || "new";
+                  const mailtoHref = buildContactMailto(row);
                   return (
                     <TableRow key={row.id || row._id}>
                       <TableCell>{row.title || "-"}</TableCell>
@@ -359,6 +441,13 @@ export default function ContactUsPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
+                          {mailtoHref ? (
+                            <Button asChild variant="outline" size="icon" title="Reply via email">
+                              <a href={mailtoHref}>
+                                <Mail className="h-4 w-4" />
+                              </a>
+                            </Button>
+                          ) : null}
                           <Button
                             variant="outline"
                             size="sm"
@@ -374,6 +463,15 @@ export default function ContactUsPage() {
                             onClick={() => handleStatusUpdate(row, "replied")}
                           >
                             Mark Replied
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            title="Delete message"
+                            disabled={deleteMutation.isPending}
+                            onClick={() => requestDelete(row.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
                       </TableCell>
@@ -414,7 +512,7 @@ export default function ContactUsPage() {
       </div>
 
       <Dialog open={!!selectedId} onOpenChange={(open) => !open && setSelectedId(null)}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Message Details</DialogTitle>
             <DialogDescription>
@@ -469,7 +567,20 @@ export default function ContactUsPage() {
                   {(selectedDetail || selectedRow)?.message || "-"}
                 </div>
               </div>
-              <div className="flex items-center gap-2 justify-end">
+              <ContactReplyPanel
+                contactId={selectedId}
+                contact={(selectedDetail || selectedRow) as ContactItem | null}
+                detailQueryKey={["contact-us-detail", selectedId]}
+                listQueryKey={CONTACT_LIST_QUERY_KEY}
+              />
+              <div className="flex items-center gap-2 justify-end flex-wrap">
+                <Button
+                  variant="destructive"
+                  disabled={deleteMutation.isPending || !selectedId}
+                  onClick={() => requestDelete(selectedId || undefined)}
+                >
+                  Delete
+                </Button>
                 <Button
                   variant="outline"
                   disabled={
@@ -516,6 +627,30 @@ export default function ContactUsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete message</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this contact message. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteMutation.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                confirmDelete();
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardShell>
   );
 }

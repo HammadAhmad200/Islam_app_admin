@@ -5,7 +5,7 @@ import { api } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Eye, Mail } from "lucide-react";
+import { Eye, Mail, Trash2 } from "lucide-react";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { Badge } from "@/components/ui/badge";
@@ -24,8 +24,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { ContactReplyPanel } from "@/components/contact/contact-reply-panel";
+import { buildContactMailto, type ContactReply } from "@/lib/contact-inquiry";
+
+const IMAM_CONTACT_LIST_QUERY_KEY = ["imam-emails"] as const;
 
 interface ContactItem {
   id?: string;
@@ -36,10 +50,30 @@ interface ContactItem {
   message: string;
   status: "new" | "read" | "replied";
   createdAt: string;
+  source?: "imamEmail" | "appSupport";
+  title?: string | null;
+  replies?: ContactReply[];
+}
+
+function removeContactFromListCache(old: unknown, deletedId: string) {
+  if (!old || typeof old !== "object") return old;
+  const idMatches = (item: ContactItem) =>
+    String(item.id || item._id) !== String(deletedId);
+  if (Array.isArray(old)) {
+    return old.filter(idMatches);
+  }
+  const data = old as { results?: ContactItem[] };
+  if (Array.isArray(data.results)) {
+    return { ...data, results: data.results.filter(idMatches) };
+  }
+  return old;
 }
 
 export default function ImamQueriesPage() {
+  const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | "new" | "read" | "replied">("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -52,7 +86,7 @@ export default function ImamQueriesPage() {
     error,
     refetch,
   } = useQuery<ContactItem[] | { results: ContactItem[] }>({
-    queryKey: ["imam-emails"],
+    queryKey: [...IMAM_CONTACT_LIST_QUERY_KEY],
     queryFn: api.getContacts,
   });
 
@@ -122,6 +156,34 @@ export default function ImamQueriesPage() {
     [selectedDetailRaw]
   );
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.deleteContact(id),
+    onSuccess: (_data, deletedId) => {
+      queryClient.setQueryData(IMAM_CONTACT_LIST_QUERY_KEY, (old) =>
+        removeContactFromListCache(old, deletedId)
+      );
+      setSelectedId(null);
+      setDeleteConfirmOpen(false);
+      setPendingDeleteId(null);
+      toast({
+        title: "Deleted",
+        description: "Message removed.",
+      });
+    },
+    onError: (err: Error) => {
+      const notFound = err.message === "Not found";
+      toast({
+        title: notFound ? "Not found" : "Error",
+        description: notFound ? "Not found" : err.message || "Failed to delete message.",
+        variant: "destructive",
+      });
+      if (notFound) {
+        setDeleteConfirmOpen(false);
+        setPendingDeleteId(null);
+      }
+    },
+  });
+
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: "new" | "read" | "replied" }) =>
       api.updateContactStatus(id, status),
@@ -158,6 +220,24 @@ export default function ImamQueriesPage() {
       console.log("Updating contact status", { contactId, status, row });
     }
     updateStatusMutation.mutate({ id: contactId, status });
+  }
+
+  function requestDelete(contactId: string | undefined) {
+    if (!contactId) {
+      toast({
+        title: "Error",
+        description: "Invalid contact id",
+        variant: "destructive",
+      });
+      return;
+    }
+    setPendingDeleteId(contactId);
+    setDeleteConfirmOpen(true);
+  }
+
+  function confirmDelete() {
+    if (!pendingDeleteId) return;
+    deleteMutation.mutate(pendingDeleteId);
   }
 
   return (
@@ -228,9 +308,10 @@ export default function ImamQueriesPage() {
             ) : (
               pagedContacts.map((c) => {
                 const fullName = `${c.firstName} ${c.lastName}`.trim();
-                const mailto = `mailto:${encodeURIComponent(c.email)}?subject=${encodeURIComponent(
-                  `Re: Your question`
-                )}&body=${encodeURIComponent("Assalamu Alaikum,\n\n")} `;
+                const mailtoHref = buildContactMailto({
+                  ...c,
+                  source: c.source || "imamEmail",
+                });
                 return (
                   <TableRow key={c.id || c._id}>
                     <TableCell className="whitespace-nowrap">{fullName}</TableCell>
@@ -270,10 +351,21 @@ export default function ImamQueriesPage() {
                         >
                           Mark Replied
                         </Button>
-                        <Button asChild variant="outline" size="icon" title="Reply via email">
-                        <a href={mailto}>
-                          <Mail className="h-4 w-4" />
-                        </a>
+                        {mailtoHref ? (
+                          <Button asChild variant="outline" size="icon" title="Reply via email">
+                            <a href={mailtoHref}>
+                              <Mail className="h-4 w-4" />
+                            </a>
+                          </Button>
+                        ) : null}
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          title="Delete message"
+                          disabled={deleteMutation.isPending}
+                          onClick={() => requestDelete(c.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
                     </TableCell>
@@ -314,7 +406,7 @@ export default function ImamQueriesPage() {
     </div>
 
     <Dialog open={!!selectedId} onOpenChange={(open) => !open && setSelectedId(null)}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Message Details</DialogTitle>
           <DialogDescription>
@@ -353,7 +445,24 @@ export default function ImamQueriesPage() {
                 {(selectedDetail || selectedRow)?.message || "-"}
               </div>
             </div>
-            <div className="flex items-center gap-2 justify-end">
+            <ContactReplyPanel
+              contactId={selectedId}
+              contact={{
+                ...(selectedDetail || selectedRow),
+                source:
+                  (selectedDetail || selectedRow)?.source || "imamEmail",
+              } as ContactItem | null}
+              detailQueryKey={["imam-email-detail", selectedId]}
+              listQueryKey={IMAM_CONTACT_LIST_QUERY_KEY}
+            />
+            <div className="flex items-center gap-2 justify-end flex-wrap">
+              <Button
+                variant="destructive"
+                disabled={deleteMutation.isPending || !selectedId}
+                onClick={() => requestDelete(selectedId || undefined)}
+              >
+                Delete
+              </Button>
               <Button
                 variant="outline"
                 disabled={updateStatusMutation.isPending || (selectedDetail || selectedRow)?.status === "read"}
@@ -394,6 +503,30 @@ export default function ImamQueriesPage() {
         )}
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete message</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will permanently delete this contact message. This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            disabled={deleteMutation.isPending}
+            onClick={(e) => {
+              e.preventDefault();
+              confirmDelete();
+            }}
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </DashboardShell>
   );
 }

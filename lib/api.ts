@@ -652,6 +652,50 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify({ status }),
     }),
+  createContactReply: async (
+    id: string,
+    data: { body: string; channel?: "email" | "inApp" }
+  ) =>
+    fetchWithAuth(`/contact/${id}/replies`, {
+      method: "POST",
+      body: JSON.stringify({
+        body: data.body,
+        channel: data.channel ?? "email",
+      }),
+    }),
+  deleteContact: async (id: string) => {
+    const session = await getSession();
+    if (!session?.tokens) {
+      throw new Error("No authentication token found");
+    }
+    const { tokens } = session as { tokens: AuthTokens };
+    const headers = new Headers();
+    headers.set("Authorization", `Bearer ${tokens.access.token}`);
+    headers.set("Content-Type", "application/json");
+    headers.set("ngrok-skip-browser-warning", "1");
+
+    const response = await fetch(`${API_URL}/contact/${id}`, {
+      method: "DELETE",
+      headers,
+    });
+
+    if (response.status === 404) {
+      throw new Error("Not found");
+    }
+
+    if (!response.ok) {
+      const text = await response.text();
+      let errorData: { message?: string };
+      try {
+        errorData = text ? JSON.parse(text) : {};
+      } catch {
+        errorData = { message: "Invalid JSON response" };
+      }
+      throw new Error(errorData.message || "API request failed");
+    }
+
+    return null;
+  },
 
   // Generic function
   fetchWithAuth: (endpoint: any, options?: RequestInit) =>
