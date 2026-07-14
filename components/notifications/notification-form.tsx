@@ -36,7 +36,7 @@ const formSchema = z.object({
   announcementType: z.enum(["general", "community", "special"], {
     required_error: "Please select an announcement type",
   }),
-  targetAudience: z.enum(["all", "premium", "individual", "family"], {
+  targetAudience: z.enum(["paid", "free", "both"], {
     required_error: "Please select a target audience",
   }),
 });
@@ -52,7 +52,7 @@ export function NotificationForm() {
       title: "",
       message: "",
       announcementType: "general",
-      targetAudience: "all",
+      targetAudience: "both",
     },
   });
 
@@ -175,14 +175,9 @@ export function NotificationForm() {
                         <SelectValue placeholder="Select target audience" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All Users</SelectItem>
-                        <SelectItem value="premium">Premium Users</SelectItem>
-                        <SelectItem value="individual">
-                          Individual Subscribers
-                        </SelectItem>
-                        <SelectItem value="family">
-                          Family Subscribers
-                        </SelectItem>
+                        <SelectItem value="paid">Paid Members</SelectItem>
+                        <SelectItem value="free">Free Users</SelectItem>
+                        <SelectItem value="both">Both</SelectItem>
                       </SelectContent>
                     </Select>
                   </FormControl>

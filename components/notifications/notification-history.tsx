@@ -23,6 +23,36 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+type TargetAudience = "paid" | "free" | "both";
+
+function normalizeTargetAudience(value?: string): TargetAudience {
+  switch (value) {
+    case "paid":
+    case "free":
+    case "both":
+      return value;
+    case "all":
+      return "both";
+    case "premium":
+    case "individual":
+    case "family":
+      return "paid";
+    default:
+      return "both";
+  }
+}
+
+function formatTargetAudienceLabel(value?: string): string {
+  switch (normalizeTargetAudience(value)) {
+    case "paid":
+      return "Paid Members";
+    case "free":
+      return "Free Users";
+    case "both":
+      return "Both";
+  }
+}
+
 export function NotificationHistory() {
   const {
     notifications,
@@ -44,7 +74,8 @@ export function NotificationHistory() {
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
   const [editAnnouncementType, setEditAnnouncementType] = useState("general");
-  const [editTargetAudience, setEditTargetAudience] = useState("all");
+  const [editTargetAudience, setEditTargetAudience] =
+    useState<TargetAudience>("both");
 
   const handleResend = async (id: string) => {
     setResendingId(id);
@@ -68,7 +99,7 @@ export function NotificationHistory() {
     setEditTitle(notification.title || "");
     setEditBody(notification.body || "");
     setEditAnnouncementType(notification.announcementType || "general");
-    setEditTargetAudience(notification.targetAudience || "all");
+    setEditTargetAudience(normalizeTargetAudience(notification.targetAudience));
     setEditOpen(true);
   };
 
@@ -129,7 +160,7 @@ export function NotificationHistory() {
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
-                        {notification.targetAudience || "all"}
+                        {formatTargetAudienceLabel(notification.targetAudience)}
                       </span>
                     </TableCell>
                     <TableCell>{new Date(notification.createdAt).toDateString()}</TableCell>
@@ -213,15 +244,19 @@ export function NotificationHistory() {
                 <SelectItem value="special">Special</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={editTargetAudience} onValueChange={setEditTargetAudience}>
+            <Select
+              value={editTargetAudience}
+              onValueChange={(value) =>
+                setEditTargetAudience(value as TargetAudience)
+              }
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Target audience" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Users</SelectItem>
-                <SelectItem value="premium">Premium Users</SelectItem>
-                <SelectItem value="individual">Individual Subscribers</SelectItem>
-                <SelectItem value="family">Family Subscribers</SelectItem>
+                <SelectItem value="paid">Paid Members</SelectItem>
+                <SelectItem value="free">Free Users</SelectItem>
+                <SelectItem value="both">Both</SelectItem>
               </SelectContent>
             </Select>
           </div>
